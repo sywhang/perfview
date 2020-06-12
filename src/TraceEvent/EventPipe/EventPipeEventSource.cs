@@ -389,8 +389,14 @@ namespace Microsoft.Diagnostics.Tracing
         {
             int opcode;
             string opcodeName;
+            string eventNameWithoutOpcode;
 
-            GetOpcodeFromEventName(eventMetaDataHeader.EventName, out opcode, out opcodeName);
+            GetOpcodeFromEventName(eventMetaDataHeader.EventName, out opcode, out opcodeName, out eventNameWithoutOpcode);
+
+            if (eventNameWithoutOpcode != null)
+            {
+                eventMetaDataHeader.EventName = eventNameWithoutOpcode;
+            }
 
             DynamicTraceEventData.PayloadFetchClassInfo classInfo = null;
             DynamicTraceEventData template = new DynamicTraceEventData(null, eventMetaDataHeader.EventId, 0, eventMetaDataHeader.EventName, Guid.Empty, opcode, opcodeName, eventMetaDataHeader.ProviderId, eventMetaDataHeader.ProviderName);
@@ -600,10 +606,11 @@ namespace Microsoft.Diagnostics.Tracing
             };
         }
 
-        private static void GetOpcodeFromEventName(string eventName, out int opcode, out string opcodeName)
+        private static void GetOpcodeFromEventName(string eventName, out int opcode, out string opcodeName, out string modifiedEventName)
         {
             opcode = 0;
             opcodeName = null;
+            modifiedEventName = null;
 
             if (eventName != null)
             {
@@ -611,11 +618,13 @@ namespace Microsoft.Diagnostics.Tracing
                 {
                     opcode = (int)TraceEventOpcode.Start;
                     opcodeName = nameof(TraceEventOpcode.Start);
+                    modifiedEventName = eventName.Remove(eventName.Length - 5, 5);
                 }
                 else if (eventName.EndsWith("Stop", StringComparison.OrdinalIgnoreCase))
                 {
                     opcode = (int)TraceEventOpcode.Stop;
                     opcodeName = nameof(TraceEventOpcode.Stop);
+                    modifiedEventName = eventName.Remove(eventName.Length - 4, 4);
                 }
             }
         }
@@ -954,7 +963,7 @@ namespace Microsoft.Diagnostics.Tracing
         public int MetaDataId { get; private set; }
         public bool ContainsParameterMetadata { get; private set; }
         public string ProviderName { get; private set; }
-        public string EventName { get; private set; }
+        public string EventName { get; set; }
         public Guid ProviderId { get { return _eventRecord->EventHeader.ProviderId; } }
         public int EventId { get { return _eventRecord->EventHeader.Id; } }
         public int Version { get { return _eventRecord->EventHeader.Version; } }
